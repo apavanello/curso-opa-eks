@@ -1,0 +1,23 @@
+# Configuração do OPA para produção no EKS — bundle no S3 (capítulo 5).
+# Montar como Secret: kubectl create secret generic opa-config \
+#   --from-file=opa-config.yaml=opa-config.yaml -n mcp-platform
+bundles:
+  mcp:
+    service: s3-bundles
+    resource: mcp/bundle.tar.gz
+    poll:
+      min_delay_seconds: 30
+      max_delay_seconds: 120
+    signing:
+      method: aws4-signing
+      provider: aws
+
+services:
+  s3-bundles:
+    url: https://empresa-opa-bundles.s3.us-east-1.amazonaws.com
+
+decision_logs:
+  console: true
+
+status:
+  console: true

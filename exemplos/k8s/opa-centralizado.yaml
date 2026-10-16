@@ -1,0 +1,128 @@
+# Padrão B — OPA como serviço centralizado no EKS (capítulo 5).
+# Ajuste: URL do S3, região e tag da imagem antes de aplicar.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp-platform
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opa
+  namespace: mcp-platform
+  annotations:
+    # EKS Pod Identity association aponta para este service account
+    docs: "eksctl create pod-identity-association --cluster SEU-CLUSTER --namespace mcp-platform --service-account opa --policy-arn <arn>"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: opa-config
+  namespace: mcp-platform
+stringData:
+  opa-config.yaml: |
+    bundles:
+      mcp:
+        service: s3-bundles
+        resource: mcp/bundle.tar.gz
+        poll:
+          min_delay_seconds: 30
+          max_delay_seconds: 120
+        signing:
+          method: aws4-signing
+          provider: aws
+    services:
+      s3-bundles:
+        url: https://empresa-opa-bundles.s3.us-east-1.amazonaws.com
+    decision_logs:
+      console: true
+    status:
+      console: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  namespace: mcp-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: opa
+  template:
+    metadata:
+      labels:
+        app: opa
+    spec:
+      serviceAccountName: opa
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: opa
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: opa
+          image: openpolicyagent/opa:1.21.2-static-debug
+          args:
+            - run
+            - --server
+            - --addr=0.0.0.0:8181
+            - --log-level=info
+            - --config-file=/run/secrets/opa/opa-config.yaml
+          ports:
+            - containerPort: 8181
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8181
+          readinessProbe:
+            httpGet:
+              path: /health/live
+              port: 8181
+          resources:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: opa-config
+              mountPath: /run/secrets/opa
+              readOnly: true
+      volumes:
+        - name: opa-config
+          secret:
+            secretName: opa-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opa
+  namespace: mcp-platform
+spec:
+  selector:
+    app: opa
+  ports:
+    - port: 8181
+      targetPort: 8181
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-to-opa
+  namespace: mcp-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: opa
+  ingress:
+    - from:
+        - namespaceSelector: {} # restrinja aos namespaces que hospedam MCPs
+      ports:
+        - port: 8181
+          protocol: TCP

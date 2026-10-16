@@ -1,0 +1,11 @@
+{
+  "query": "data.documentdb.filtros.include",
+  "unknowns": ["input.documento"],
+  "input": {
+    "claims": {
+      "sub": "ana@empresa.com",
+      "papel": "financeiro",
+      "equipes": ["financeiro"]
+    }
+  }
+}

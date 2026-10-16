@@ -1,0 +1,103 @@
+# Padrão A — MCP de faturamento com OPA sidecar (capítulos 5 e 6).
+# Ajuste: imagem do MCP, URL do S3 e tag do OPA.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp-faturamento
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opa
+  namespace: mcp-faturamento
+  annotations:
+    docs: "pod-identity association para leitura do bucket de bundles"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: opa-config
+  namespace: mcp-faturamento
+stringData:
+  opa-config.yaml: |
+    bundles:
+      mcp:
+        service: s3-bundles
+        resource: mcp/bundle.tar.gz
+        poll:
+          min_delay_seconds: 30
+          max_delay_seconds: 120
+        signing:
+          method: aws4-signing
+          provider: aws
+    services:
+      s3-bundles:
+        url: https://empresa-opa-bundles.s3.us-east-1.amazonaws.com
+    decision_logs:
+      console: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-faturamento
+  namespace: mcp-faturamento
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mcp-faturamento
+  template:
+    metadata:
+      labels:
+        app: mcp-faturamento
+    spec:
+      serviceAccountName: opa # o sidecar usa a identidade para baixar o bundle
+      containers:
+        # ---- PEP: o servidor MCP ----
+        - name: mcp-server
+          image: empresa/mcp-faturamento:1.0.0
+          ports:
+            - containerPort: 8000
+          env:
+            - name: OPA_URL
+              value: http://127.0.0.1:8181
+            - name: AMBIENTE
+              value: "prod"
+            - name: JWT_SECRET # APENAS para laboratório — use um AS real
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-jwt
+                  key: secret
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+        # ---- PDP: o OPA ----
+        - name: opa
+          image: openpolicyagent/opa:1.21.2-static-debug
+          args:
+            - run
+            - --server
+            - --addr=127.0.0.1:8181 # só dentro do pod
+            - --log-level=info
+            - --config-file=/run/secrets/opa/opa-config.yaml
+          volumeMounts:
+            - name: opa-config
+              mountPath: /run/secrets/opa
+              readOnly: true
+      volumes:
+        - name: opa-config
+          secret:
+            secretName: opa-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-faturamento
+  namespace: mcp-faturamento
+spec:
+  selector:
+    app: mcp-faturamento
+  ports:
+    - port: 8000
+      targetPort: 8000

@@ -1,0 +1,21 @@
+{
+  "input": {
+    "claims": {
+      "sub": "ana@empresa.com",
+      "scope": "mcp:faturamento",
+      "equipe": "financeiro"
+    },
+    "chamada": {
+      "ferramenta": "emitir_reembolso",
+      "argumentos": {
+        "projeto_id": "proj-41",
+        "valor": 600,
+        "motivo": "servidor"
+      }
+    },
+    "contexto": {
+      "origem": "mcp-faturamento",
+      "ambiente": "prod"
+    }
+  }
+}

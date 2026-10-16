@@ -1,0 +1,17 @@
+# Configuração do OPA para laboratório local — bundle via file:// (capítulo 4).
+# Antes: opa build -b bundle/ -o /tmp/opa-bundles/mcp-bundle.tar.gz
+# Depois: opa run --server --config-file=exemplos/opa-config-local.yaml
+bundles:
+  mcp:
+    service: local
+    resource: mcp-bundle.tar.gz
+    poll:
+      min_delay_seconds: 5
+      max_delay_seconds: 10
+
+services:
+  local:
+    url: file:///tmp/opa-bundles
+
+decision_logs:
+  console: true

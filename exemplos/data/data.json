@@ -1,0 +1,36 @@
+{
+  "rbac": {
+    "vinculos": {
+      "ana@empresa.com": ["financeiro"],
+      "bruno@empresa.com": ["engenharia"],
+      "carla@empresa.com": ["admin_financeiro"]
+    },
+    "papeis": {
+      "financeiro": {
+        "permissoes": [
+          { "ferramenta": "listar_faturas", "efeito": "permitir" },
+          { "ferramenta": "ver_reembolso", "efeito": "permitir" },
+          { "ferramenta": "emitir_reembolso", "efeito": "permitir" }
+        ]
+      },
+      "engenharia": {
+        "permissoes": [
+          { "ferramenta": "listar_ocupacao_nos", "efeito": "permitir" }
+        ]
+      },
+      "admin_financeiro": {
+        "permissoes": [
+          { "ferramenta": "*", "efeito": "permitir" }
+        ]
+      }
+    }
+  },
+  "projetos": {
+    "proj-41": { "nome": "Plataforma", "equipe": "financeiro" },
+    "proj-99": { "nome": "RH Portal", "equipe": "rh" }
+  },
+  "limites": {
+    "dev": { "reembolso_max": 100 },
+    "prod": { "reembolso_max": 500 }
+  }
+}

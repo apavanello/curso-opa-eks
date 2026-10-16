@@ -1,0 +1,20 @@
+{
+  "config": {
+    "limite_stepup": 1000,
+    "quota_diaria": {
+      "analista": 50,
+      "agente_autonomo": 200
+    }
+  },
+  "pii": {
+    "papeis_liberados": ["atendimento", "compliance"],
+    "campos": {
+      "publico": ["nome", "cidade"],
+      "interno": ["nome", "cidade", "email", "telefone"],
+      "completo": ["nome", "cidade", "email", "telefone", "cpf"]
+    }
+  },
+  "agentes": {
+    "aprovados": ["agent-cobranca-01", "agent-oncall-02"]
+  }
+}
